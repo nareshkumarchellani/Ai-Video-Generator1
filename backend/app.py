@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import uuid
 
-from backend.providers.hf_provider import HuggingFaceProvider
+from providers.hf_provider import HuggingFaceProvider
 
 provider = HuggingFaceProvider()
 

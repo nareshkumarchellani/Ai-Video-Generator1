@@ -1,224 +1,189 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   generateVideo,
   getGenerationStatus,
 } from "../api/api";
 
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLLS = 120;
 
 export default function Workspace({ setGeneration }) {
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("Runway Gen-4");
-  const [style, setStyle] =useState("Realistic");
+  const [style, setStyle] = useState("Realistic");
   const [resolution, setResolution] = useState("1080p");
   const [duration, setDuration] = useState("10 sec");
   const [ratio, setRatio] = useState("16:9");
   const [camera, setCamera] = useState("Auto");
   const [fps, setFps] = useState("30 FPS");
   const [loading, setLoading] = useState(false);
-  const [taskId, setTaskId] = useState(null);
-const [provider, setProvider] = useState(null);
+
+  const pollRef = useRef(null);
+  const pollCountRef = useRef(0);
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    pollCountRef.current = 0;
+  };
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, []);
 
   const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      alert("Please enter a prompt.");
+      return;
+    }
 
-  if (!prompt.trim()) {
-    alert("Please enter a prompt.");
-    return;
-  }
+    stopPolling();
+    setLoading(true);
 
-  setLoading(true);
-
-  setGeneration({
-    loading: true,
-    progress: 10,
-    status: "Sending request...",
-    video: null,
-  });
-
-  console.clear();
-
-  console.table({
-    prompt,
-    model,
-    style,
-    resolution,
-    duration,
-    ratio,
-    camera,
-    fps,
-  });
-
-  try {
-
-    const data = await generateVideo({
-  prompt,
-  model,
-  style,
-  resolution,
-  duration,
-  ratio,
-  camera,
-  fps,
-});
     setGeneration({
       loading: true,
-      progress: 60,
-      status: "Generating...",
+      progress: 10,
+      status: "Sending request...",
       video: null,
     });
 
-    
-
-    console.log("Backend Response");
-    console.log(data);
-    if (data.status === "accepted") {
-
-  setTaskId(data.task_id);
-  setProvider(data.provider);
-
-  setGeneration({
-    loading: true,
-    progress: 20,
-    status: "Task Created",
-    video: null,
-  });
-
-  const interval = setInterval(async () => {
-
     try {
+      const data = await generateVideo({
+        prompt,
+        model,
+        style,
+        resolution,
+        duration,
+        ratio,
+        camera,
+        fps,
+      });
 
-      const status = await getGenerationStatus(
-        data.provider,
-        data.task_id,
-        localStorage.getItem("runway_api_key") || ""
-      );
-
-      console.log("Status:", status);
-
-      if (
-        status.status === "pending" ||
-        status.status === "running" ||
-        status.status === "throttled"
-      ) {
-
-        setGeneration((prev) => ({
-          ...prev,
-          progress: Math.min(prev.progress + 10, 90),
-          status: status.status,
-        }));
-
-      }
-
-      else if (status.status === "success") {
-
-        clearInterval(interval);
-
+      if (data.status === "accepted") {
         setGeneration({
-          loading: false,
-          progress: 100,
-          status: "Completed",
-          video: status.video,
+          loading: true,
+          progress: 20,
+          status: "Task Created",
+          video: null,
         });
 
-        setLoading(false);
+        pollRef.current = setInterval(async () => {
+          pollCountRef.current += 1;
 
+          if (pollCountRef.current > MAX_POLLS) {
+            stopPolling();
+            setLoading(false);
+            setGeneration({
+              loading: false,
+              progress: 0,
+              status: "Timed out",
+              video: null,
+            });
+            alert("Generation timed out. Please try again.");
+            return;
+          }
+
+          try {
+            const status = await getGenerationStatus(
+              data.provider,
+              data.task_id,
+            );
+
+            if (
+              status.status === "pending" ||
+              status.status === "running" ||
+              status.status === "throttled" ||
+              status.status === "processing"
+            ) {
+              setGeneration((prev) => ({
+                ...prev,
+                progress: Math.min(prev.progress + 5, 90),
+                status: status.status,
+              }));
+              return;
+            }
+
+            if (status.status === "success") {
+              stopPolling();
+              setLoading(false);
+              setGeneration({
+                loading: false,
+                progress: 100,
+                status: "Completed",
+                video: status.video,
+              });
+              return;
+            }
+
+            if (
+              status.status === "failed" ||
+              status.status === "error"
+            ) {
+              stopPolling();
+              setLoading(false);
+              alert(status.message || "Generation Failed");
+              setGeneration({
+                loading: false,
+                progress: 0,
+                status: "Failed",
+                video: null,
+              });
+            }
+          } catch (err) {
+            stopPolling();
+            setLoading(false);
+            const message = err?.message || "Unknown Error";
+            setGeneration({
+              loading: false,
+              progress: 0,
+              status: message,
+              video: null,
+            });
+            alert(message);
+          }
+        }, POLL_INTERVAL_MS);
+
+        return;
       }
 
-      else if (
-        status.status === "failed" ||
-        status.status === "error"
-      ) {
-
-        clearInterval(interval);
-
-        alert(status.message || "Generation Failed");
-
+      if (data.status === "error") {
+        alert(data.message);
         setGeneration({
           loading: false,
           progress: 0,
           status: "Failed",
           video: null,
         });
-
-        setLoading(false);
-
+        return;
       }
-
-    } catch (err) {
-
-  console.error(err);
-
-  const message = err?.message || "Unknown Error";
-
-  setGeneration({
-    loading: false,
-    progress: 0,
-    status: message,
-    video: null,
-  });
-
-  alert(message);
-
-} finally {
-
-  setLoading(false);
-
-}
-
-  }, 3000);
-
-  return;
-}
-
-    // Backend Error
-    if (data.status === "error") {
-
-      alert(data.message);
 
       setGeneration({
         loading: false,
+        progress: 100,
+        status: "Completed",
+        video: data.video,
+      });
+    } catch (err) {
+      const message = err?.message || "Unknown Error";
+      setGeneration({
+        loading: false,
         progress: 0,
-        status: "Failed",
+        status: message,
         video: null,
       });
-
-      return;
+      alert(message);
+    } finally {
+      if (!pollRef.current) {
+        setLoading(false);
+      }
     }
-
-    // Success
-    setGeneration({
-      loading: false,
-      progress: 100,
-      status: "Completed",
-      video: data.video,
-    });
-
-  } catch (err) {
-
-  console.error(err);
-
-  const message = err?.message || "Unknown Error";
-
-  setGeneration({
-    loading: false,
-    progress: 0,
-    status: message,
-    video: null,
-  });
-
-  alert(message);
-
-} finally {
-
-  setLoading(false);
-
-}
-
-};
+  };
 
   return (
     <div className="space-y-8">
 
-      {/* Heading */}
       <div>
         <h1 className="text-5xl font-bold">
           Create AI Video
@@ -230,7 +195,6 @@ const [provider, setProvider] = useState(null);
         </p>
       </div>
 
-      {/* Prompt */}
       <div className="rounded-3xl bg-white/5 border border-white/10 p-6">
 
         <div className="flex items-center justify-between mb-4">
@@ -291,7 +255,6 @@ No watermark.
 
       </div>
 
-      {/* Main Options */}
       <div className="grid grid-cols-4 gap-5">
 
         <div>
@@ -305,8 +268,6 @@ No watermark.
             className="w-full rounded-xl bg-[#171f34] p-4 border border-white/10"
           >
             <option>Runway Gen-4</option>
-            <option>Luma Dream Machine</option>
-            <option>Pika Labs</option>
             <option>PixVerse</option>
             <option>Hailuo AI</option>
             <option>Veo 3</option>
@@ -361,18 +322,11 @@ No watermark.
           >
             <option>5 sec</option>
             <option>10 sec</option>
-            <option>15 sec</option>
-            <option>30 sec</option>
-            <option>45 sec</option>
-            <option>1 minute</option>
-            <option>2 minutes</option>
-            <option>3 minutes</option>
           </select>
         </div>
 
       </div>
 
-      {/* Advanced */}
       <div className="grid grid-cols-3 gap-5">
 
         <div>
@@ -428,30 +382,28 @@ No watermark.
 
       </div>
 
-      {/* Generate Button */}
       <button
-  onClick={handleGenerate}
-  disabled={!prompt.trim() || loading}
-  className={`
-    w-full
-    py-5
-    rounded-2xl
-    font-bold
-    text-xl
-    transition-all
-    duration-300
-
-    ${
-      loading
-        ? "bg-cyan-700 cursor-wait text-white"
-        : prompt.trim()
-        ? "bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/40 hover:scale-[1.02]"
-        : "bg-gray-700 text-gray-400 cursor-not-allowed"
-    }
-  `}
->
-  {loading ? "Generating..." : "🚀 Generate AI Video"}
-</button>
+        onClick={handleGenerate}
+        disabled={!prompt.trim() || loading}
+        className={`
+          w-full
+          py-5
+          rounded-2xl
+          font-bold
+          text-xl
+          transition-all
+          duration-300
+          ${
+            loading
+              ? "bg-cyan-700 cursor-wait text-white"
+              : prompt.trim()
+              ? "bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/40 hover:scale-[1.02]"
+              : "bg-gray-700 text-gray-400 cursor-not-allowed"
+          }
+        `}
+      >
+        {loading ? "Generating..." : "🚀 Generate AI Video"}
+      </button>
 
     </div>
   );

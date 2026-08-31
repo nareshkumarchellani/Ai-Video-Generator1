@@ -47,13 +47,13 @@ export async function generateVideo(data) {
 }
 
 
-export async function testRunwayKey() {
+export async function testRunwayKey(apiKey) {
   const response = await fetch(
     `${API_URL}/runway/account`,
     {
       headers: {
         "X-Runway-Key":
-          localStorage.getItem("runway_api_key") || "",
+          apiKey || localStorage.getItem("runway_api_key") || "",
       },
     }
   );

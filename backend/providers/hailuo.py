@@ -5,12 +5,18 @@ class HailuoProvider(BaseProvider):
 
     async def generate(self, prompt, options):
 
-        print("Hailuo Provider")
+        api_key = options.get("hailuo_api_key", "")
+        if not api_key:
+            return {
+                "status": "error",
+                "provider": "Hailuo",
+                "message": "Hailuo API Key not provided"
+            }
 
         return {
-            "status": "success",
-            "video": None,
+            "status": "error",
             "provider": "Hailuo",
+            "message": "Hailuo provider is not implemented yet"
         }
 
     async def get_status(self, task_id, api_key):

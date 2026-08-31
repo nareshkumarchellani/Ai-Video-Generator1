@@ -1,4 +1,7 @@
-from backend.config import MODEL
+try:
+    from config import MODEL
+except ImportError:
+    from backend.config import MODEL
 
 class HuggingFaceProvider:
 

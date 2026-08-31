@@ -39,16 +39,21 @@ class ProviderManager:
         api_key,
     ):
 
-        provider = self.providers.get(provider)
+        provider_instance = self.providers.get(provider)
 
-        if provider is None:
+        if provider_instance is None:
+            for name, instance in self.providers.items():
+                if name.startswith(provider):
+                    provider_instance = instance
+                    break
 
+        if provider_instance is None:
             return {
                 "status": "error",
                 "message": "Unknown provider"
             }
 
-        return await provider.get_status(
+        return await provider_instance.get_status(
             task_id,
             api_key,
         )

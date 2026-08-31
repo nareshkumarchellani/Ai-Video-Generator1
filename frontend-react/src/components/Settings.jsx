@@ -1,23 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { testRunwayKey } from "../api/api";
 
 export default function Settings() {
 
-  const [runwayKey, setRunwayKey] = useState("");
-  const [veoKey, setVeoKey] = useState("");
-  const [pixverseKey, setPixverseKey] = useState("");
-  const [hailuoKey, setHailuoKey] = useState("");
+  const [runwayKey, setRunwayKey] = useState(
+    () => localStorage.getItem("runway_api_key") || ""
+  );
+  const [veoKey, setVeoKey] = useState(
+    () => localStorage.getItem("veo_api_key") || ""
+  );
+  const [pixverseKey, setPixverseKey] = useState(
+    () => localStorage.getItem("pixverse_api_key") || ""
+  );
+  const [hailuoKey, setHailuoKey] = useState(
+    () => localStorage.getItem("hailuo_api_key") || ""
+  );
 
   const [status, setStatus] = useState("");
-
-  useEffect(() => {
-
-    setRunwayKey(localStorage.getItem("runway_api_key") || "");
-    setVeoKey(localStorage.getItem("veo_api_key") || "");
-    setPixverseKey(localStorage.getItem("pixverse_api_key") || "");
-    setHailuoKey(localStorage.getItem("hailuo_api_key") || "");
-
-  }, []);
 
   const saveKeys = () => {
 
@@ -36,12 +35,7 @@ export default function Settings() {
 
     try {
 
-      const result = await testRunwayKey();
-
-      // ===== DEBUG =====
-      console.log("========== RUNWAY TEST ==========");
-      console.log(result);
-      // =================
+      const result = await testRunwayKey(runwayKey);
 
       if (result.status === "success") {
 
@@ -61,9 +55,6 @@ export default function Settings() {
       }
 
     } catch (e) {
-
-      console.error("========== RUNWAY TEST ERROR ==========");
-      console.error(e);
 
       setStatus(
         "❌ " +
