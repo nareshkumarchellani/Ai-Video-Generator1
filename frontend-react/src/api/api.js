@@ -58,7 +58,7 @@ export async function generateVideo(data) {
 // Naya generic function jo sabhi 4 providers ki keys ko test karega
 export async function testProviderKey(provider) {
   try {
-    const response = const response = await fetch(`${API_URL}/test-provider`, {
+    const response = await fetch(`${API_URL}/test-provider`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
