@@ -7,7 +7,7 @@ import {
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 120;
 
-export default function Workspace({ setGeneration }) {
+export default function Workspace({ setGeneration, addToHistory }) {
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("Runway Gen-4");
   const [style, setStyle] = useState("Realistic");
@@ -114,6 +114,13 @@ export default function Workspace({ setGeneration }) {
                 status: "Completed",
                 video: status.video,
               });
+              if (status.video && addToHistory) {
+                addToHistory({
+                  prompt,
+                  model,
+                  video: status.video,
+                });
+              }
               return;
             }
 
@@ -165,6 +172,13 @@ export default function Workspace({ setGeneration }) {
         status: "Completed",
         video: data.video,
       });
+      if (data.video && addToHistory) {
+        addToHistory({
+          prompt,
+          model,
+          video: data.video,
+        });
+      }
     } catch (err) {
       const message = err?.message || "Unknown Error";
       setGeneration({

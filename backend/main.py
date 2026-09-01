@@ -1,5 +1,6 @@
 import asyncio
 
+import requests
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -58,6 +59,63 @@ async def runway_account(
         }
 
 
+def _check_veo_key(api_key: str):
+    response = requests.get(
+        "https://generativelanguage.googleapis.com/v1beta/models",
+        headers={"x-goog-api-key": api_key},
+        params={"pageSize": 1},
+        timeout=15,
+    )
+    if response.status_code == 200:
+        return {"status": "success", "message": "Veo API Key Valid"}
+    try:
+        message = response.json().get("error", {}).get("message", "Invalid API Key")
+    except Exception:
+        message = f"Request failed with status {response.status_code}"
+    return {"status": "error", "message": message}
+
+
+def _check_pixverse_key(api_key: str):
+    import uuid
+
+    response = requests.get(
+        "https://app-api.pixverse.ai/openapi/v2/account/balance",
+        headers={"API-KEY": api_key, "Ai-trace-id": str(uuid.uuid4())},
+        timeout=15,
+    )
+    try:
+        data = response.json()
+    except Exception:
+        return {"status": "error", "message": f"Request failed with status {response.status_code}"}
+
+    if data.get("ErrCode") == 0:
+        return {"status": "success", "message": "PixVerse API Key Valid"}
+    return {"status": "error", "message": data.get("ErrMsg", "Invalid API Key")}
+
+
+def _check_hailuo_key(api_key: str):
+    # Cheap call: an invalid task_id still authenticates the key first.
+    # status_code 1004/2049 => bad key. Anything else => key is valid.
+    response = requests.get(
+        "https://api.minimax.io/v1/query/video_generation",
+        headers={"Authorization": f"Bearer {api_key}"},
+        params={"task_id": "0"},
+        timeout=15,
+    )
+    try:
+        data = response.json()
+    except Exception:
+        return {"status": "error", "message": f"Request failed with status {response.status_code}"}
+
+    status_code = data.get("base_resp", {}).get("status_code", 0)
+    if status_code in (1004, 2049):
+        return {
+            "status": "error",
+            "message": data.get("base_resp", {}).get("status_msg", "Invalid API Key"),
+        }
+    return {"status": "success", "message": "Hailuo API Key Valid"}
+
+
 @app.post("/test-provider")
 async def test_provider(
     data: dict,
@@ -84,20 +142,22 @@ async def test_provider(
             "message": f"{provider} API Key not found"
         }
 
-    # Agar Runway hai toh uska official account check chalao
-    if provider == "Runway":
-        result = await runway_account(x_runway_key=key)
-        return {
-            **result,
-            "provider": provider,
-        }
+    try:
+        if provider == "Runway":
+            result = await runway_account(x_runway_key=key)
+        elif provider == "Veo":
+            result = await asyncio.to_thread(_check_veo_key, key)
+        elif provider == "PixVerse":
+            result = await asyncio.to_thread(_check_pixverse_key, key)
+        elif provider == "Hailuo":
+            result = await asyncio.to_thread(_check_hailuo_key, key)
+        else:
+            result = {"status": "error", "message": f"Unknown provider '{provider}'"}
 
-    # Baaki sabhi providers (Veo, PixVerse, Hailuo) ke liye key receive hone par success bhej do
-    return {
-        "status": "success",
-        "provider": provider,
-        "message": f"{provider} API Key received and verified!"
-    }
+        return {**result, "provider": provider}
+
+    except Exception as e:
+        return {"status": "error", "provider": provider, "message": str(e)}
 
 
 @app.get("/generation-status/{provider}/{task_id}")

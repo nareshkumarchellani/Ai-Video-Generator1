@@ -1,6 +1,12 @@
 import { Sparkles } from "lucide-react";
 
-export default function Navbar() {
+const links = [
+  { id: "workspace", title: "Home" },
+  { id: "dashboard", title: "Dashboard" },
+  { id: "projects", title: "Projects" },
+];
+
+export default function Navbar({ page, setPage }) {
   return (
     <nav className="flex items-center justify-between px-10 py-5 border-b border-white/10">
 
@@ -20,14 +26,26 @@ export default function Navbar() {
 
       {/* Menu */}
       <div className="hidden md:flex gap-8 text-gray-300">
-        <a href="#">Home</a>
-        <a href="#">Dashboard</a>
-        <a href="#">Projects</a>
-        <a href="#">Pricing</a>
+        {links.map((link) => (
+          <button
+            key={link.id}
+            onClick={() => setPage?.(link.id)}
+            className={`transition-colors ${
+              page === link.id
+                ? "text-cyan-400 font-semibold"
+                : "hover:text-white"
+            }`}
+          >
+            {link.title}
+          </button>
+        ))}
       </div>
 
       {/* Button */}
-      <button className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-2 rounded-xl transition">
+      <button
+        onClick={() => setPage?.("workspace")}
+        className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-2 rounded-xl transition"
+      >
         Get Started
       </button>
 
