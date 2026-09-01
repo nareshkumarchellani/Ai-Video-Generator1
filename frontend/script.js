@@ -15,18 +15,20 @@ button.addEventListener("click", async () => {
     button.disabled = true;
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/generate-video", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                prompt,
-                model: "Runway Gen-4",
-                duration: `${duration} sec`,
-                ratio: "16:9",
-            })
-        });
+
+        const response = await fetch(
+            "https://ai-video-generator1.onrender.com/generate",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    prompt,
+                    duration
+                })
+            }
+        );
 
         const data = await response.json();
 
@@ -34,18 +36,19 @@ button.addEventListener("click", async () => {
             throw new Error(data.message || "Video generation failed");
         }
 
-        if (data.status === "accepted") {
-            statusEl.innerText = `Task started. ID: ${data.task_id}`;
-            return;
-        }
-
-        statusEl.innerText = data.message || "Request sent";
+        statusEl.innerText =
+            `Task started. ID: ${data.job_id}`;
 
     } catch (error) {
+
+        console.error("API Error:", error);
+
         statusEl.innerText = `Error: ${error.message}`;
         alert(error.message);
-    } finally {
-        button.disabled = false;
-    }
 
+    } finally {
+
+        button.disabled = false;
+
+    }
 });
