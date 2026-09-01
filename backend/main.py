@@ -9,17 +9,9 @@ from api.generate import router as generate_router
 app = FastAPI(title="Flow AI Backend")
 
 manager = ProviderManager()
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://ai-video-generator-nu.vercel.app",
-        "https://ai-video-generator-1vqm9beg4-learners20.vercel.app",  # Yeh naya link add kar diya
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
+    allow_origins=["*"],  # Yeh sabhi Vercel links ko automatically allow kar dega
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
