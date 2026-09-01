@@ -1,6 +1,4 @@
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
-).replace(/\/$/, "");
+const API_URL = "https://ai-video-generator1.onrender.com";
 
 function getErrorMessage(error, fallback = "Request failed") {
   if (error instanceof Error && error.message) {
@@ -13,7 +11,6 @@ function getErrorMessage(error, fallback = "Request failed") {
 
   return fallback;
 }
-
 export async function generateVideo(data) {
   try {
     const response = await fetch(`${API_URL}/generate-video`, {
