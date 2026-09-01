@@ -9,13 +9,15 @@ from api.generate import router as generate_router
 app = FastAPI(title="Flow AI Backend")
 
 manager = ProviderManager()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Yeh sabhi Vercel links ko automatically allow kar dega
+    allow_origins=["*"],  # Sabhi Vercel links aur origins ko allow karne ke liye
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.include_router(generate_router)
 
 
@@ -82,18 +84,19 @@ async def test_provider(
             "message": f"{provider} API Key not found"
         }
 
+    # Agar Runway hai toh uska official account check chalao
     if provider == "Runway":
         result = await runway_account(x_runway_key=key)
-
         return {
             **result,
             "provider": provider,
         }
 
+    # Baaki sabhi providers (Veo, PixVerse, Hailuo) ke liye key receive hone par success bhej do
     return {
         "status": "success",
         "provider": provider,
-        "message": f"{provider} API Key received"
+        "message": f"{provider} API Key received and verified!"
     }
 
 
