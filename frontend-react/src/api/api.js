@@ -55,7 +55,6 @@ export async function generateVideo(data) {
   }
 }
 
-// Naya generic function jo sabhi 4 providers ki keys ko test karega
 export async function testProviderKey(provider) {
   try {
     const response = await fetch(`${API_URL}/test-provider`, {
@@ -82,7 +81,6 @@ export async function testProviderKey(provider) {
   }
 }
 
-// Purana function backward compatibility ke liye rakha hai
 export async function testRunwayKey(apiKey) {
   return testProviderKey("Runway");
 }
