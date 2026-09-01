@@ -4,13 +4,16 @@ from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 
 from providers.manager import ProviderManager
+from api.generate import router as generate_router
 
 app = FastAPI(title="Flow AI Backend")
+
 manager = ProviderManager()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://ai-video-generator-nu.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:4173",
@@ -20,6 +23,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(generate_router)
 
 
 @app.get("/")
@@ -46,6 +51,7 @@ async def runway_account(
         await asyncio.to_thread(
             lambda: RunwayML(api_key=x_runway_key)
         )
+
         return {
             "status": "success",
             "message": "API Key Valid"
@@ -58,29 +64,6 @@ async def runway_account(
         }
 
 
-@app.post("/generate-video")
-async def generate_video(
-    data: dict,
-    x_runway_key: str | None = Header(default=None),
-    x_veo_key: str | None = Header(default=None),
-    x_pixverse_key: str | None = Header(default=None),
-    x_hailuo_key: str | None = Header(default=None),
-):
-
-    data["runway_api_key"] = x_runway_key
-    data["veo_api_key"] = x_veo_key
-    data["pixverse_api_key"] = x_pixverse_key
-    data["hailuo_api_key"] = x_hailuo_key
-
-    result = await manager.generate(
-        model=data.get("model"),
-        prompt=data.get("prompt"),
-        options=data,
-    )
-
-    return result
-
-
 @app.post("/test-provider")
 async def test_provider(
     data: dict,
@@ -89,7 +72,6 @@ async def test_provider(
     x_pixverse_key: str | None = Header(default=None),
     x_hailuo_key: str | None = Header(default=None),
 ):
-
     provider = data.get("provider", "")
 
     keys = {
@@ -110,6 +92,7 @@ async def test_provider(
 
     if provider == "Runway":
         result = await runway_account(x_runway_key=key)
+
         return {
             **result,
             "provider": provider,
@@ -131,7 +114,6 @@ async def generation_status(
     x_pixverse_key: str | None = Header(default=None),
     x_hailuo_key: str | None = Header(default=None),
 ):
-
     api_keys = {
         "Runway": x_runway_key,
         "Veo": x_veo_key,
