@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uuid
+
 
 from providers.hf_provider import HuggingFaceProvider
 
@@ -10,6 +12,16 @@ app = FastAPI(
     title="Flow AI",
     version="1.0.0",
     description="Free AI Video Generator"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://ai-video-generator-nu.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Temporary storage
