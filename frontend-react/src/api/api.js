@@ -11,6 +11,7 @@ function getErrorMessage(error, fallback = "Request failed") {
 
   return fallback;
 }
+
 export async function generateVideo(data) {
   try {
     const response = await fetch(`${API_URL}/generate-video`, {
@@ -54,24 +55,36 @@ export async function generateVideo(data) {
   }
 }
 
-export async function testRunwayKey(apiKey) {
+// Naya generic function jo sabhi 4 providers ki keys ko test karega
+export async function testProviderKey(provider) {
   try {
-    const response = await fetch(`${API_URL}/runway/account`, {
+    const response = const response = await fetch(`${API_URL}/test-provider`, {
+      method: "POST",
       headers: {
-        "X-Runway-Key": apiKey || localStorage.getItem("runway_api_key") || "",
+        "Content-Type": "application/json",
+        "X-Runway-Key": localStorage.getItem("runway_api_key") || "",
+        "X-Veo-Key": localStorage.getItem("veo_api_key") || "",
+        "X-Pixverse-Key": localStorage.getItem("pixverse_api_key") || "",
+        "X-Hailuo-Key": localStorage.getItem("hailuo_api_key") || "",
       },
+      body: JSON.stringify({ provider }),
     });
 
     const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result?.message || "Runway account check failed");
+    if (!response.ok || result?.status === "error") {
+      throw new Error(result?.message || `${provider} connection test failed`);
     }
 
     return result;
   } catch (error) {
-    throw new Error(getErrorMessage(error, "Runway account check failed"));
+    throw new Error(getErrorMessage(error, `${provider} connection test failed`));
   }
+}
+
+// Purana function backward compatibility ke liye rakha hai
+export async function testRunwayKey(apiKey) {
+  return testProviderKey("Runway");
 }
 
 export async function getGenerationStatus(provider, taskId) {
@@ -79,6 +92,9 @@ export async function getGenerationStatus(provider, taskId) {
     const response = await fetch(`${API_URL}/generation-status/${provider}/${taskId}`, {
       headers: {
         "X-Runway-Key": localStorage.getItem("runway_api_key") || "",
+        "X-Veo-Key": localStorage.getItem("veo_api_key") || "",
+        "X-Pixverse-Key": localStorage.getItem("pixverse_api_key") || "",
+        "X-Hailuo-Key": localStorage.getItem("hailuo_api_key") || "",
       },
     });
 
